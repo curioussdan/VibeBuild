@@ -1,0 +1,70 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    function isAdmin() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         (request.auth.token.email == "yikuanwuntu26@gmail.com" && request.auth.token.email_verified == true));
+    }
+    function isProjectParticipant(projectId) {
+      let project = get(/databases/$(database)/documents/projects/$(projectId)).data;
+      return isAuthenticated() && (request.auth.uid == project.clientId || request.auth.uid == project.selectedBuilderId || isAdmin());
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'displayName', 'role', 'createdAt']) &&
+             data.uid is string && data.email is string && data.displayName is string &&
+             data.role in ['client', 'builder', 'admin'];
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    // User Rules
+    match /users/{userId} {
+      // PII Protection: Only allow owner or admin to read sensitive data
+      // However, we need to allow read for profile display. 
+      // In a real app, we'd split users into public/private.
+      // For now, allow read if authenticated, but limit fields in a real scenario.
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.role == 'client';
+      allow update: if (isOwner(userId) && request.resource.data.role == resource.data.role) || isAdmin();
+    }
+
+    // Builder Rules
+    match /builders/{userId} {
+      allow read: if true;
+      allow create, update: if isOwner(userId) || isAdmin();
+    }
+
+    // Project Rules
+    match /projects/{projectId} {
+      allow read: if isAuthenticated() && (request.auth.uid == resource.data.clientId || request.auth.uid == resource.data.selectedBuilderId || isAdmin());
+      allow create: if isAuthenticated() && request.resource.data.clientId == request.auth.uid;
+      allow update: if isAuthenticated() && (request.auth.uid == resource.data.clientId || request.auth.uid == resource.data.selectedBuilderId || isAdmin());
+
+      match /messages/{messageId} {
+        allow read: if isProjectParticipant(projectId);
+        allow create: if isProjectParticipant(projectId);
+      }
+
+      match /deliveries/{deliveryId} {
+        allow read: if isProjectParticipant(projectId);
+        allow create: if isAuthenticated() && request.auth.uid == get(/databases/$(database)/documents/projects/$(projectId)).data.selectedBuilderId;
+      }
+    }
+  }
+}

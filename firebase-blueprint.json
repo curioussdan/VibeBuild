@@ -1,0 +1,102 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "role": { "type": "string", "enum": ["client", "builder", "admin"] },
+        "photoURL": { "type": "string", "format": "uri" },
+        "timezone": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "BuilderProfile": {
+      "title": "Builder Profile",
+      "description": "Public profile for builders",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "headline": { "type": "string" },
+        "bio": { "type": "string" },
+        "specialties": { "type": "array", "items": { "type": "string" } },
+        "pricingRange": { "type": "string" },
+        "turnaroundEstimate": { "type": "string" },
+        "ratingAverage": { "type": "number" },
+        "ratingCount": { "type": "integer" },
+        "availabilityStatus": { "type": "string", "enum": ["available", "busy", "away"] }
+      },
+      "required": ["userId", "headline", "bio"]
+    },
+    "ProjectRequest": {
+      "title": "Project Request",
+      "description": "A client's project request",
+      "type": "object",
+      "properties": {
+        "clientId": { "type": "string" },
+        "initialPrompt": { "type": "string" },
+        "aiQuestions": { "type": "array", "items": { "type": "object" } },
+        "aiAnswers": { "type": "object" },
+        "finalSummary": { "type": "object" },
+        "selectedBuilderId": { "type": "string" },
+        "quotedPrice": { "type": "number" },
+        "estimatedDeliveryTime": { "type": "string" },
+        "status": { "type": "string", "enum": ["draft", "clarifying", "confirming", "selecting_builder", "awaiting_payment", "in_progress", "delivered", "completed"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["clientId", "status"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "A message in a project thread",
+      "type": "object",
+      "properties": {
+        "projectId": { "type": "string" },
+        "senderId": { "type": "string" },
+        "text": { "type": "string" },
+        "attachments": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["projectId", "senderId", "text"]
+    },
+    "Delivery": {
+      "title": "Delivery",
+      "description": "Project delivery assets and instructions",
+      "type": "object",
+      "properties": {
+        "projectId": { "type": "string" },
+        "downloadLink": { "type": "string", "format": "uri" },
+        "instructions": { "type": "string" },
+        "completedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["projectId", "downloadLink", "instructions"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/builders/{userId}": {
+      "schema": "BuilderProfile",
+      "description": "Builder public profiles"
+    },
+    "/projects/{projectId}": {
+      "schema": "ProjectRequest",
+      "description": "Project requests and active jobs"
+    },
+    "/projects/{projectId}/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Messages within a project"
+    },
+    "/projects/{projectId}/deliveries/{deliveryId}": {
+      "schema": "Delivery",
+      "description": "Project deliveries"
+    }
+  }
+}
